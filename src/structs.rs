@@ -1,6 +1,9 @@
 //! MSP structures
+use heapless::Vec;
+use packed_struct_codegen::{PackedStruct, PrimitiveEnum};
+use serde::{Deserialize, Serialize};
 
-use prelude::v1::*;
+use crate::prelude::v1::*;
 
 #[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
 pub struct MspApiVersion {
@@ -42,7 +45,7 @@ pub struct MspUniqueId {
 }
 
 #[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
-#[packed_struct(bytes = "1", endian = "lsb", bit_numbering = "msb0")]
+#[packed_struct(bytes = "2", endian = "lsb", bit_numbering = "msb0")]
 pub struct MspAvailableSensors {
     #[packed_field(bits = "2")]
     pub sonar: bool,
@@ -61,12 +64,16 @@ pub struct MspAvailableSensors {
 pub struct MspStatus {
     pub cycle_time: u16,
     pub i2c_errors: u16,
-    #[packed_field(size_bits = "8")]
-    pub sensors: MspAvailableSensors,
-    pub null1: u8,
+    pub sensors: u16,
     pub flight_mode: u32,
     pub profile: u8,
     pub system_load: u16,
+    pub gyro_cycle_time: u16,
+    pub flight_mode_flag_bits: u8,
+    pub flight_mode_flags: u16,
+    pub arming_disable_flags_count: u8,
+    pub arming_disable_flags: u32,
+    pub config_state_flags: u8,
 }
 
 #[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
@@ -192,6 +199,47 @@ pub struct MspAltitude {
 
 #[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
 #[packed_struct(endian = "lsb")]
+pub struct MotorStatus {
+    /// temperature
+    pub temperature: u8,
+    /// rpm
+    pub rpm: u16,
+}
+
+#[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
+#[packed_struct(endian = "lsb")]
+pub struct MotorTelemetry {
+    /// rpm
+    pub rpm: u32,
+    /// invalid pct
+    pub invalid_pct: u16,
+    pub temperature: u8,
+    pub voltage: u16,
+    pub current: u16,
+    pub cinsuption: u16,
+}
+
+#[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
+#[packed_struct(endian = "lsb")]
+pub struct MspMotorTelemetry {
+    /// Motor count
+    pub motor_count: u8,
+    /// motors [temp:u8, rpm: u16]
+    #[packed_field(element_size_bits = "104")]
+    pub motor_sensor_data: [MotorTelemetry; 4],
+}
+
+#[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
+#[packed_struct(endian = "lsb")]
+pub struct MspEscSensorData {
+    /// Motor count
+    pub motor_count: u8,
+    /// motors [temp:u8, rpm: u16]
+    #[packed_field(element_size_bits = "24")]
+    pub motor_sensor_data: [MotorStatus; 4],
+}
+#[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
+#[packed_struct(endian = "lsb")]
 pub struct MspBatteryConfig {
     pub vbat_min_cell_voltage: u8,
     pub vbat_max_cell_voltage: u8,
@@ -204,11 +252,12 @@ pub struct MspBatteryConfig {
 #[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
 #[packed_struct(endian = "lsb")]
 pub struct MspAnalog {
-    pub battery_voltage: u8,
+    pub leagcy_battery_voltage: u8,
     pub mah_drawn: u16,
     pub rssi: u16,
     /// Current in 0.01A steps, range is -320A to 320A
     pub amperage: i16,
+    pub battery_voltage: u16,
 }
 
 #[derive(PackedStruct, Serialize, Deserialize, Debug, Copy, Clone)]
@@ -554,7 +603,7 @@ pub struct MspSetOsdLayoutItem {
 pub struct MspOsdSettings {
     pub osd_support: u8,
     pub config: MspOsdConfig,
-    pub item_positions: Vec<MspOsdItemPosition>,
+    pub item_positions: Vec<MspOsdItemPosition, 32>,
 }
 
 #[derive(PackedStruct, Debug, Copy, Clone)]
@@ -654,6 +703,7 @@ impl TryFrom<&str> for Baudrate {
     }
 }
 
+#[cfg(feature = "std")]
 impl From<Baudrate> for String {
     fn from(value: Baudrate) -> Self {
         match value {

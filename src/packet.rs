@@ -1,5 +1,7 @@
 use crc_any::CRCu8;
-use prelude::v1::*;
+use heapless::Vec;
+
+use crate::prelude::v1::*;
 
 /// Packet parsing error
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -41,7 +43,7 @@ impl MspPacketDirection {
 pub struct MspPacket {
     pub cmd: u16,
     pub direction: MspPacketDirection,
-    pub data: Vec<u8>,
+    pub data: Vec<u8, 255>,
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -65,7 +67,7 @@ enum MSPVersion {
     V2,
 }
 
-#[derive(Debug)]
+// #[derive(Debug)]
 /// Parser that can find packets from a raw byte stream
 pub struct MspParser {
     state: MspParserState,
@@ -73,7 +75,7 @@ pub struct MspParser {
     packet_direction: MspPacketDirection,
     packet_cmd: u16,
     packet_data_length_remaining: usize,
-    packet_data: Vec<u8>,
+    packet_data: Vec<u8, 255>,
     packet_crc: u8,
     packet_crc_v2: CRCu8,
 }
@@ -143,15 +145,15 @@ impl MspParser {
             MspParserState::FlagV2 => {
                 // uint8, flag, usage to be defined (set to zero)
                 self.state = MspParserState::CommandV2;
-                self.packet_data = Vec::with_capacity(2);
+                self.packet_data.clear();
                 self.packet_crc_v2.digest(&[input]);
             }
 
             MspParserState::CommandV2 => {
-                self.packet_data.push(input);
+                self.packet_data.push(input).unwrap();
 
                 if self.packet_data.len() == 2 {
-                    let mut s = [0u8; size_of::<u16>()];
+                    let mut s = [0u8; core::mem::size_of::<u16>()];
                     s.copy_from_slice(&self.packet_data);
                     self.packet_cmd = u16::from_le_bytes(s);
 
@@ -162,15 +164,14 @@ impl MspParser {
             }
 
             MspParserState::DataLengthV2 => {
-                self.packet_data.push(input);
+                self.packet_data.push(input).unwrap();
 
                 if self.packet_data.len() == 2 {
-                    let mut s = [0u8; size_of::<u16>()];
+                    let mut s = [0u8; core::mem::size_of::<u16>()];
                     s.copy_from_slice(&self.packet_data);
                     self.packet_data_length_remaining = u16::from_le_bytes(s).into();
                     self.packet_crc_v2.digest(&self.packet_data);
-                    self.packet_data =
-                        Vec::with_capacity(self.packet_data_length_remaining as usize);
+                    self.packet_data.clear();
 
                     if self.packet_data_length_remaining == 0 {
                         self.state = MspParserState::Crc;
@@ -181,7 +182,7 @@ impl MspParser {
             }
 
             MspParserState::DataV2 => {
-                self.packet_data.push(input);
+                self.packet_data.push(input).unwrap();
                 self.packet_data_length_remaining -= 1;
 
                 if self.packet_data_length_remaining == 0 {
@@ -193,7 +194,7 @@ impl MspParser {
                 self.packet_data_length_remaining = input as usize;
                 self.state = MspParserState::Command;
                 self.packet_crc ^= input;
-                self.packet_data = Vec::with_capacity(input as usize);
+                self.packet_data.clear();
             }
 
             MspParserState::Command => {
@@ -209,7 +210,7 @@ impl MspParser {
             }
 
             MspParserState::Data => {
-                self.packet_data.push(input);
+                self.packet_data.push(input).unwrap();
                 self.packet_data_length_remaining -= 1;
 
                 self.packet_crc ^= input;
@@ -263,7 +264,7 @@ impl MspParser {
     }
 }
 
-impl Default for ::MspParser {
+impl Default for MspParser {
     fn default() -> Self {
         Self::new()
     }

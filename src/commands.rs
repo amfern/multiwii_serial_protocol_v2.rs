@@ -1,3 +1,5 @@
+use packed_struct_codegen::PrimitiveEnum;
+
 #[derive(PrimitiveEnum, Debug, Copy, Clone, PartialEq)]
 #[allow(non_camel_case_types)]
 
@@ -70,6 +72,7 @@ pub enum MspCommandCode {
     MSP_BATTERY_STATE = 130,
 
     MSP_MOTOR_CONFIG = 131,
+    MSP_MOTOR_TELEMETRY = 139,
 
     // OSD commands
     MSP_OSD_VIDEO_CONFIG = 180,
@@ -104,6 +107,8 @@ pub enum MspCommandCode {
     MSP_MOTOR_3D_CONFIG = 124,
     MSP_RC_DEADBAND = 125,
     MSP_SENSOR_ALIGNMENT = 126,
+
+    MSP_ESC_SENSOR_DATA = 134,
 
     MSP_SET_RAW_RC = 200,
     MSP_SET_RAW_GPS = 201,

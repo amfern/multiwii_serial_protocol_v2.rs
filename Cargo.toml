@@ -3,19 +3,23 @@ name = "multiwii_serial_protocol_v2"
 description = "A Multiwii Serial Protocol (MSP) implementation for Rust"
 repository = "https://github.com/amfern/multiwii_serial_protocol.rs"
 version = "0.1.12"
-authors = ["Rudi Benkovic <rudi.benkovic@gmail.com>", "Ilya Guterman <amfernusus@gmail.com>"]
+authors = [
+    "Rudi Benkovic <rudi.benkovic@gmail.com>",
+    "Ilya Guterman <amfernusus@gmail.com>",
+]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
+edition = "2021"
 
 [dependencies]
-packed_struct = "0.4"
-packed_struct_codegen = "0.4"
-serde = "1.0"
-serde_derive = "1.0"
-crc-any = "2.3"
+packed_struct = { version = "0.10", default-features = false }
+packed_struct_codegen = { version = "0.10", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+crc-any = { version = "2.5", default-features = false }
+heapless = "0.8"
 
 [features]
 default = ["std"]
-std = []
+std = ["packed_struct/std"]
 no_std = []
 suppport_int32_setting_type = []
